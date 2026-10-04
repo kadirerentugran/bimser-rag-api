@@ -1,0 +1,30 @@
+# Mevcut (zaten var)
+.env
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+.DS_Store
+uploads/
+*.log
+
+# Conda ortamı
+.conda/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker volumes (yerel veriler)
+pgdata/
+
+# Test / Debug dosyaları
+server.log
+
+# macOS
+.DS_Store
+Thumbs.db
