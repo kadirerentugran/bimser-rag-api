@@ -16,3 +16,5 @@ python-slugify==8.0.4
 numpy==1.26.4
 opencv-python-headless==4.9.0.80
 easyocr==1.7.1
+paddlepaddle
+paddleocr
