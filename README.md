@@ -68,7 +68,3 @@ Sistemi kendi bilgisayarınızda (Localhost) tek tuşla ayağa kaldırmak için 
     👉 **[http://localhost:8000/docs](http://localhost:8000/docs)**
 
 ---
-
-<div align="center">
-  <p>👨‍💻 <i>Kadir Eren Tuğran tarafından Bimser için özel olarak tasarlanmıştır.</i></p>
-</div>
