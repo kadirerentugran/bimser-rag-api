@@ -1,15 +1,15 @@
 <div align="center">
-  <h1>🚀 Bimser RAG & Document API</h1>
+  <h1>Bimser RAG & Document API</h1>
   <p>Akıllı Doküman Analizi, Vektör Arama ve Llama 3.1 Destekli RAG (Retrieval-Augmented Generation) Backend Altyapısı</p>
 </div>
 
 ---
 
-## 📌 Proje Hakkında
+## Proje Hakkında
 
 Bu proje, kurum içi dokümanların (Word, PDF vb.) sisteme yüklenip, **Ollama (Llama 3.1)** ve **PostgreSQL (pgvector)** kullanılarak anlamsal olarak analiz edilmesini ve yapay zeka aracılığıyla sorgulanmasını sağlayan güçlü bir API servisidir.
 
-### 🌟 Öne Çıkan Özellikler
+### Öne Çıkan Özellikler
 
 *   **RAG (Retrieval-Augmented Generation):** Şirket dokümanlarınızı yapay zeka hafızasına katarak spesifik sorulara doğru yanıtlar üretme.
 *   **Vektör Veritabanı:** `pgvector` eklentisiyle HNSW indekslemesi yaparak milisaniyeler içinde anlamsal arama (Semantic Search).
@@ -18,7 +18,7 @@ Bu proje, kurum içi dokümanların (Word, PDF vb.) sisteme yüklenip, **Ollama 
 
 ---
 
-## 📸 API Arayüzü (Swagger UI)
+## API Arayüzü (Swagger UI)
 
 FastAPI tarafından otomatik oluşturulan modern ve interaktif dokümantasyon ekranı:
 
@@ -26,7 +26,7 @@ FastAPI tarafından otomatik oluşturulan modern ve interaktif dokümantasyon ek
 
 ---
 
-## 🛠️ Mimari ve Teknolojiler
+## Mimari ve Teknolojiler
 
 *   **Framework:** Python 3.11, FastAPI, Starlette
 *   **Veritabanı:** PostgreSQL 16 + AsyncPG + SQLAlchemy
@@ -35,7 +35,7 @@ FastAPI tarafından otomatik oluşturulan modern ve interaktif dokümantasyon ek
 
 ---
 
-## 🚀 Kurulum (Local Development)
+## Kurulum (Local Development)
 
 Sistemi kendi bilgisayarınızda (Localhost) tek tuşla ayağa kaldırmak için aşağıdaki adımları izleyin:
 
@@ -65,6 +65,6 @@ Sistemi kendi bilgisayarınızda (Localhost) tek tuşla ayağa kaldırmak için 
 
 4.  **Test Edin:**
     Tarayıcınızdan şu adrese giderek API'yi test edebilirsiniz:
-    👉 **[http://localhost:8000/docs](http://localhost:8000/docs)**
+    **[http://localhost:8000/docs](http://localhost:8000/docs)**
 
 ---
