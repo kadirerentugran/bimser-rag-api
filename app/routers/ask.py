@@ -16,23 +16,21 @@ from app.services.ollama_service import embed, chat
 
 router = APIRouter(prefix="/ask", tags=["RAG"])
 
-SYSTEM_PROMPT = """Sen Bimser Çözüm ürünleri konusunda uzman bir teknik destek asistanısın.
-Sana verilen belge parçalarına dayanarak soruyu TÜRKÇE olarak yanıtla.
-Kullanıcının sorusunda yazım hataları (typo) veya eksik harfler olabilir. Sorusunun gelişinden ne kastettiğini anlamaya çalış ve belgelerdeki en uygun bilgiyi kullanarak cevap ver.
-Eğer kullanıcının ne demek istediğini anlıyorsan fakat cevap aşağıdaki belgelerde gerçekten yoksa, o zaman "Bu konuda belgelerimde yeterli bilgi bulamadım. Lütfen teknik destek ekibimizle iletişime geçin." de.
-Kendi bilginden tahmin veya yorum üretme. Sadece belgelerdeki bilgileri kullan.
-Cevabı net, adım adım ve anlaşılır bir şekilde yaz."""
-
+SYSTEM_PROMPT = """Sen Bimser Çözüm ürünleri konusunda uzman, profesyonel bir teknik destek asistanısın.
+Lütfen aşağıdaki kurallara KESİNLİKLE uy:
+1. SOHBET/SELAMLAMA: Eğer kullanıcı "merhaba", "selam", "selamlar", "nasılsın", "günaydın" gibi günlük bir sohbet veya selamlama mesajı yazdıysa, AŞAĞIDAKİ BELGELERİ TAMAMEN GÖRMEZDEN GEL. Sadece kısa ve nazikçe kendini tanıt (örn: "Merhaba! Bimser Yapay Zeka Asistanıyım. Size dokümanlarımızla ilgili nasıl yardımcı olabilirim?"). Asla başka bir konudan bahsetme.
+2. TEKNİK SORU: Eğer kullanıcı bir şey soruyorsa, SADECE sana verilen BELGELER kısmındaki bilgilere dayanarak yanıtla. 
+3. BİLGİ YOKSA: Eğer sorunun cevabı sana verilen belgelerde geçmiyorsa, KESİNLİKLE kendi genel kültüründen veya internetten cevap uydurma. Sadece "Bu konuda belgelerimde yeterli bilgi bulamadım. Lütfen teknik destek ekibimizle iletişime geçin." de.
+4. FORMAT: Cevabını doğrudan ver. "Kullanıcının sorusunu anlıyorum", "Belgelere göre cevap veriyorum" gibi gereksiz iç ses (monolog) cümleleri kurma. Sadece cevabı söyle.
+"""
 
 def get_raw_db_url(url: str) -> str:
     return url.replace("postgresql+asyncpg://", "postgresql://")
 
-
 class AskRequest(BaseModel):
-    question: str = Field(..., min_length=3, max_length=1000, description="Sorulacak soru")
+    question: str = Field(..., min_length=2, max_length=1000, description="Sorulacak soru")
     product_filter: Optional[str] = Field(None, description="Opsiyonel ürün filtresi (örn: 'eBAPlus')")
     top_k: int = Field(5, ge=1, le=20, description="Getirilecek chunk sayısı")
-
 
 class Source(BaseModel):
     title: str
@@ -41,41 +39,29 @@ class Source(BaseModel):
     excerpt: str
     similarity: float
 
-
 class AskResponse(BaseModel):
     answer: str
     sources: List[Source]
     duration_ms: int
     chunks_used: int
 
-
 @router.post("/", response_model=AskResponse)
 async def ask(body: AskRequest):
-    """
-    RAG tabanlı soru-cevap.
-    1. Soruyu vektöre çevir
-    2. pgvector'den en benzer chunk'ları bul
-    3. Llama3.1:8b ile Türkçe cevap üret
-    """
     settings = get_settings()
     start_time = time.time()
 
-    # 1. Generate embedding for query
     question_vector = await embed(body.question)
 
     conn = await asyncpg.connect(get_raw_db_url(settings.database_url))
 
     try:
-        # Tabloda hiç veri var mı kontrol et
         count = await conn.fetchval("SELECT count(*) FROM embeddings")
         if count == 0:
             raise HTTPException(
                 status_code=503,
-                detail="Henüz hiç doküman indekslenmemiş. "
-                       "Önce POST /embeddings/reindex endpoint'ini çalıştırın.",
+                detail="Henüz hiç doküman indekslenmemiş. Önce POST /embeddings/reindex endpoint'ini çalıştırın.",
             )
 
-        # 2. Vector similarity search
         if body.product_filter:
             rows = await conn.fetch(
                 """
@@ -111,21 +97,14 @@ async def ask(body: AskRequest):
 
     if not rows:
         return AskResponse(
-            answer="Seçtiğiniz filtreye (ürüne) ait belgelerimde hiçbir bilgi bulamadım. Lütfen filtreyi kaldırarak tekrar deneyin.",
+            answer="Seçtiğiniz filtreye ait hiçbir belge bulamadım.",
             sources=[],
             duration_ms=int((time.time() - start_time) * 1000),
             chunks_used=0,
         )
 
-    relevant_rows = [r for r in rows if r["similarity"] >= 0.25]
-
-    if not relevant_rows:
-        return AskResponse(
-            answer="Sorunuzu tam olarak anlayamadım veya bu konuda belgelerimde yeterli bilgi bulamadım. Lütfen sorunuzu kontrol edip teknik destek ekibimizle iletişime geçin.",
-            sources=[],
-            duration_ms=int((time.time() - start_time) * 1000),
-            chunks_used=0,
-        )
+    # Threshold'u çok az arttırdık
+    relevant_rows = [r for r in rows if r["similarity"] >= 0.35]
 
     context_parts = []
     for i, row in enumerate(relevant_rows, 1):
@@ -133,22 +112,19 @@ async def ask(body: AskRequest):
         source_title = meta.get("title", "Belge")
         context_parts.append(f"[{i}. Kaynak: {source_title}]\n{row['chunk_text']}")
 
-    context = "\n\n---\n\n".join(context_parts)
+    context = "\n\n---\n\n".join(context_parts) if context_parts else "Hiçbir belge bulunamadı."
 
-    # 4. Construct LLM prompt
     prompt = f"""{SYSTEM_PROMPT}
 
 BELGELER:
 {context}
 
-SORU: {body.question}
+KULLANICININ MESAJI/SORUSU: {body.question}
 
 CEVAP:"""
 
-    # 5. Generate response using LLM
     answer = await chat(prompt)
 
-    # 6. Prepare unique sources
     seen_hrefs = set()
     sources = []
     for row in relevant_rows:
